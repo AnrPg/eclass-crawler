@@ -11,16 +11,16 @@ A simple Bash script that automates the downloading of course materials from the
 ## 🛠️ Usage
 
 ```bash
-./eclass-downloader.sh <eclass_course_url> <mode> <cookies_file>
+./grab_files.sh <eclass_course_url> <mode> <cookies_file>
 ```
 
 ### Arguments:
 
-| Argument            | Description                                                                 |
-|---------------------|-----------------------------------------------------------------------------|
-| `<eclass_course_url>` | Full URL of the course's main eClass page (e.g. https://eclass.tuc.gr/courses/ABC123/) |
-| `<mode>`            | `0` = use ZIP button if available; `1` = crawl and download all files individually |
-| `<cookies_file>`    | File containing your authenticated session cookies                          |
+| Argument               | Description                                                                             |
+|------------------------|-----------------------------------------------------------------------------------------|
+| `<eclass_course_url>`  | Full URL of the course's main eClass page (e.g. https://eclass.tuc.gr/courses/ABC123/)  |
+| `<mode>`               | `0` = use ZIP button if available; `1` = crawl and download all files individually      |
+| `<cookies_file>`       | File containing your authenticated session cookies                                      |
 
 ---
 
@@ -30,18 +30,18 @@ You need to export your browser session cookies so the script can authenticate a
 
 ### ✅ Option 1: Use your browser's DevTools
 
-1. Go to the eClass course page.
-2. Open **Developer Tools** (press `Ctrl + Shift + I` or `F12`).
-3. Go to the **Network** tab.
-4. Refresh the page (`F5`).
-5. Click on the first request to the course (usually the main HTML file).
-6. Under the **Headers** tab, scroll to **Request Headers** → find the `Cookie` field.
-7. Copy the entire `Cookie:` string.
+1. Go to the eClass course page and make sure you're logged in.
+2. Open Developer Tools (press Ctrl + Shift + I or Ctrl + F12).
+3. Click on the Application tab.
+4. In the left sidebar, under Storage → Cookies, select the eClass site (e.g., https://eclass.tuc.gr).
+5. Look for the cookie named PHPSESSID in the list.
+6. Copy its Name=Value pair (e.g., PHPSESSID=abc123xyz456).
+7. Paste this into a plain text file called cookies.txt.
 8. Paste it into a file, e.g. `cookies.txt`
 
    Your cookie file should look like:
    ```
-   PHPSESSID=abc123xyz456; _ga=GA1.2.123456789.1234567890; ...
+   eclass.uniwa.gr        TRUE    /       FALSE   0       PHPSESSID       lhr1oqs6nbg09qrerfbm4akqin
    ```
 
 ### ✅ Option 2: Use a browser extension
@@ -58,7 +58,7 @@ Use the extension to export your cookies as plain text and save them to `cookies
 ### 🔹 Example 1: Using the ZIP button (mode 0)
 
 ```bash
-./eclass-downloader.sh https://eclass.tuc.gr/courses/ABC123/ 0 cookies.txt
+./grab_files.sh "https://eclass.tuc.gr/courses/ABC123/" 0 cookies.txt
 ```
 
 This will download the ZIP file (if the button exists) and extract it.
@@ -66,7 +66,7 @@ This will download the ZIP file (if the button exists) and extract it.
 ### 🔹 Example 2: Crawling and downloading each file (mode 1)
 
 ```bash
-./eclass-downloader.sh https://eclass.tuc.gr/courses/ABC123/ 1 my_cookies.txt
+./grab_files.sh "https://eclass.tuc.gr/courses/ABC123/" 1 my_cookies.txt
 ```
 
 This will crawl through the course page and download each file individually.
