@@ -16,9 +16,15 @@ A simple Bash script that automates the downloading of course materials from the
 
 ### Arguments:
 
+First Argument (eclass_course_url) is mandatory
+Second argument (destination_dir) is optional and defaults to the current directory (where the script is run from)
+Third argument (mode) is optional and defaults to 0
+Fourth argument (cookies file) is optional, but if you don't provide one, then you should append your session cookies to a file cookies.txt in the current directory (which is the default file location)
+
 | Argument               | Description                                                                             |
 |------------------------|-----------------------------------------------------------------------------------------|
 | `<eclass_course_url>`  | Full URL of the course's main eClass page (e.g. https://eclass.tuc.gr/courses/ABC123/)  |
+| `<destination_dir>`    | Destination folder for the extracted/downloaded files                                   |
 | `<mode>`               | `0` = use ZIP button if available; `1` = crawl and download all files individually      |
 | `<cookies_file>`       | File containing your authenticated session cookies                                      |
 

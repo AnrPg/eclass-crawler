@@ -27,22 +27,30 @@ if [ "${autograb_links:-0}" -eq 0 ]; then
         full_url="$url"
     fi
 
+    echo -e "Downloading from $full_url\n"
     my_unzipped_folder="$destination_dir/catalog_$(date +%Y_%m_%d___%H_%M_%S)"
     mkdir -p $my_unzipped_folder && curl -i -L -b $cookies_file -o temp.zip "$full_url" && unzip -q temp.zip -d $my_unzipped_folder
     mapfile -t urls < <(unzip -Z1 temp.zip)
     rm temp.zip
-    zipped_files_count=$(find "$my_unzipped_folder" -maxdepth 1 -type f \( -iname "*.zip" -o -iname "*.rar" \) | wc -l)
-    exit 0
+    
+    # exit 0
 else
     mapfile -t urls < <(grep -oP "href=['\"]\K[^'\"]+\.(pdf|zip|rar|tar|gz|docx?|xlsx?|pptx?|txt|csv|7z|tar\.gz|tgz|mp4|mp3)" $destination_dir/page_to_grab.html)
 fi
 
 total=${#urls[@]}
-echo "🔍 Found $total downloadable file(s):"
-printf '%s\n' "${urls[@]}"
+if [ "${autograb_links:-0}" -eq 0 ]; then
+    echo -e "\n🔍 Parent directory contains in total $total file(s):\n"
+    zipped_files_count=$(find "$my_unzipped_folder" -maxdepth 1 -type f \( -iname "*.zip" -o -iname "*.rar" \) | wc -l)
+    [ $zipped_files_count -ne 0 ] && echo -e "(of which, $zipped_files_count are compressed/packed (i.e. zip/rar/tar/7z/gz/tgz files) and can be further extracted)\n\n"
+    printf '%s\n' "${urls[@]}"
+else
+    echo -e "\n🔍 Found $total downloadable file(s):\n"
+    printf '%s\n' "${urls[@]}"
+fi
 
 # Progress tracking
-count=${zipped_files_count:-0}
+count=0
 downloaded=0
 bar_length=50
 
@@ -51,34 +59,36 @@ for url in "${urls[@]}"; do
 
     if [ "${autograb_links:-0}" -eq 0 ]; then
        
+        # TODO: remove initial, un-decompressed files after decompression is finished
+        
         ext="${url##*.}"  # Get the extension
         case "$ext" in
             zip)
-            # echo "Unzipping: $file"
-            unzip -o "$file" -d "$(dirname "$file")"
+            # echo "Unzipping: $url"
+            unzip -o "$my_unzipped_folder/$url" -d "$my_unzipped_folder/"
             ;;
             rar)
-            echo "Unpacking RAR: $file at $(dirname "$file")"
-            unrar x -o+ "$file" "$(dirname "$file")/"
+            echo "Unpacking RAR: $url at $(dirname "$url")"
+            unrar x -o+ "$my_unzipped_folder/$url" "$my_unzipped_folder/"
             ;;
             tar)
-            # echo "Extracting tar: $file"
-            tar -xf "$file" -C "$(dirname "$file")"
+            # echo "Extracting tar: $url"
+            tar -xf "$my_unzipped_folder/$url" -C "$my_unzipped_folder/"
             ;;
             # 7z)
-            # # echo "Unpacking 7z: $file"
-            # 7z x "$file" -o"$(dirname "$file")" -y
+            # # echo "Unpacking 7z: $url"
+            # 7z x "$url" -o"$(dirname "$url")" -y
             # ;;
             # gz)
-            # # echo "Decompressing gzip: $file"
-            # gunzip -k "$file"  # -k keeps original .gz file
+            # # echo "Decompressing gzip: $url"
+            # gunzip -k "$url"  # -k keeps original .gz file
             # ;;
             # tgz|tar.gz)
-            # # echo "Extracting tar.gz: $file"
-            # tar -xzf "$file" -C "$(dirname "$file")"
+            # # echo "Extracting tar.gz: $url"
+            # tar -xzf "$url" -C "$(dirname "$url")"
             # ;;
             # *)
-            # # echo "Skipping unsupported file: $file"
+            # # echo "Skipping unsupported file: $url"
             # ;;
         esac
     else        
@@ -106,8 +116,10 @@ for url in "${urls[@]}"; do
         fi
     fi
 
+    # TODO: Fix progress bar -> 1) show percentage and summary correctly, 2) show loading animation correctly
+
     # Progress bar
-    percent=$(( count * 100 / total ))
+    percent=$(( count * 100 / $total ))
     filled=$(( percent * bar_length / 100 ))
     bar=$(printf "%-${bar_length}s" "#" | cut -c1-$filled)
     printf "\r⬇️ Downloading: [%-${bar_length}s] %3d%% (%d/%d)" "$bar" "$percent" "$count" "$total"
