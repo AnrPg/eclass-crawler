@@ -129,47 +129,45 @@ for url in "${urls[@]}"; do
 
         # Download
         cd $destination_dir # TODO: move it out of the loop (taking into consideration the case where mode=0)
-        if filename=$(curl -s -b $cookies_file --write-out "%{filename_effective}" -L -OJ "$full_url"); then 
-            # echo -e "\n--------------\n\norig_dir: $orig_dir\n\ndestination_dir: $destination_dir\n\ncurrent_dir: $PWD\n\n---------------\n\n"
+        if filename=$(curl -s -b "$orig_dir/$cookies_file" --write-out "%{filename_effective}" -L -OJ "$full_url"); then 
             echo "$full_url" >> "$log_file"
             ((downloaded++))
-            # ext="${filename##*.}"  # Get the extension
-            # # echo -e "\n--------------\n\norig_dir: $orig_dir\n\ndestination_dir: $destination_dir\n\nfilename: $filename\n\nfull_url: $full_url\n\next: $ext\n\n---------------\n\n"
-            # case "$ext" in
-            #     zip)
-            #     echo -e "\nUnzipping: $filename at $destination_dir/$filename"
-            #     unzip -o "$destination_dir/$filename" -d "$destination_dir/"
-            #     rm "$destination_dir/$filename"
-            #     ;;
-            #     rar)
-            #     echo -e "\nUnpacking RAR: $filename at $destination_dir/$filename"
-            #     unrar x -o+ "$destination_dir/$filename" "$destination_dir/"
-            #     # rm "$destination_dir/$filename"
-            #     ;;
-            #     tar)
-            #     echo -e "\nExtracting tar: $filename at $destination_dir/$filename"
-            #     tar -xf "$destination_dir/$filename" -C "$destination_dir/"
-            #     rm "$destination_dir/$filename"
-            #     ;;
-            #     7z)
-            #     echo -e "\nUnpacking 7z: $filename at $destination_dir/$filename"
-            #     7z x "$filename" -o"$(dirname "$filename")" -y
-            #     rm "$destination_dir/$filename"
-            #     ;;
-            #     gz)
-            #     echo -e "\nDecompressing gzip: $filename at $destination_dir/$filename"
-            #     gunzip -k "$filename"  # -k keeps original .gz file
-            #     rm "$destination_dir/$filename"
-            #     ;;
-            #     tgz|tar.gz)
-            #     echo -e "\nExtracting tar.gz: $filename at $destination_dir/$filename"
-            #     tar -xzf "$filename" -C "$(dirname "$filename")"
-            #     rm "$destination_dir/$filename"
-            #     ;;
-            #     *)
-            #     echo -e "\nSkipping unsupported file: $filename"
-            #     ;;
-            # esac
+            ext="${filename##*.}"  # Get the extension
+            case "$ext" in
+                zip)
+                echo -e "\nUnzipping: $filename at $destination_dir/$filename"
+                unzip -o "$destination_dir/$filename" -d "$destination_dir/"
+                rm "$destination_dir/$filename"
+                ;;
+                rar)
+                echo -e "\nUnpacking RAR: $filename at $destination_dir/$filename"
+                unrar x -o+ "$destination_dir/$filename" "$destination_dir/"
+                rm "$destination_dir/$filename"
+                ;;
+                tar)
+                echo -e "\nExtracting tar: $filename at $destination_dir/$filename"
+                tar -xf "$destination_dir/$filename" -C "$destination_dir/"
+                rm "$destination_dir/$filename"
+                ;;
+                7z)
+                echo -e "\nUnpacking 7z: $filename at $destination_dir/$filename"
+                7z x "$filename" -o"$(dirname "$filename")" -y
+                rm "$destination_dir/$filename"
+                ;;
+                gz)
+                echo -e "\nDecompressing gzip: $filename at $destination_dir/$filename"
+                gunzip -k "$filename"  # -k keeps original .gz file
+                rm "$destination_dir/$filename"
+                ;;
+                tgz|tar.gz)
+                echo -e "\nExtracting tar.gz: $filename at $destination_dir/$filename"
+                tar -xzf "$filename" -C "$(dirname "$filename")"
+                rm "$destination_dir/$filename"
+                ;;
+                *)
+                echo -e "\nSkipping unsupported file: $filename"
+                ;;
+            esac
         fi
     fi
 
