@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -uo pipefail
+
 website="$1"
 destination_dir="${2:-.}"
 autograb_links="${3:-1}" # If arg 3 is missing, set it to default (to automatically crawl the webpage, create a list of downloadable files and then grab them)
@@ -20,7 +22,7 @@ if [ "${autograb_links:-0}" -eq 0 ]; then
     echo -e "\nDownloading files using the button for batch downloading the parent folder...\n"
     url=$(grep -oP "<a\s+href=['\"]\K[^'\"]+(?=['\"][^>]*>\s*<span[^>]*title=['\"]Λήψη όλου του καταλόγου)" $destination_dir/page_to_grab.html | sed 's/&amp;/\&/g')
     
-    if [[ "$full_url" != http* ]]; then
+    if [[ "$url" != http* ]]; then
         base=$(echo "$website" | sed 's|\(https*://[^/]*\).*|\1|')
         full_url="${base}${url}"
     else
@@ -54,43 +56,51 @@ count=0
 downloaded=0
 bar_length=50
 
+# Loop through urls and download or unpack them depending on the mode
+# If mode = 1 then download all links in the page, one by one, while
+# if mode = 0, that means that you downloaded a zip with all files, so
+# now you have to decompress any file that is compressed
 for url in "${urls[@]}"; do
     ((count++))
 
     if [ "${autograb_links:-0}" -eq 0 ]; then
-       
-        # TODO: remove initial, un-decompressed files after decompression is finished
-        
+               
         ext="${url##*.}"  # Get the extension
         case "$ext" in
             zip)
-            # echo "Unzipping: $url"
+            # echo -e "\nUnzipping: $url"
             unzip -o "$my_unzipped_folder/$url" -d "$my_unzipped_folder/"
             ;;
             rar)
-            echo "Unpacking RAR: $url at $(dirname "$url")"
+            echo -e "\nUnpacking RAR: $url at $(dirname "$url")"
             unrar x -o+ "$my_unzipped_folder/$url" "$my_unzipped_folder/"
+            rm "$my_unzipped_folder/$url"
             ;;
             tar)
-            # echo "Extracting tar: $url"
+            # echo -e "\nExtracting tar: $url"
             tar -xf "$my_unzipped_folder/$url" -C "$my_unzipped_folder/"
+            rm "$my_unzipped_folder/$url"
             ;;
             # 7z)
-            # # echo "Unpacking 7z: $url"
+            # # echo -e "\nUnpacking 7z: $url"
             # 7z x "$url" -o"$(dirname "$url")" -y
+            # rm "$my_unzipped_folder/$url"
             # ;;
             # gz)
-            # # echo "Decompressing gzip: $url"
+            # # echo -e "\nDecompressing gzip: $url"
             # gunzip -k "$url"  # -k keeps original .gz file
+            # rm "$my_unzipped_folder/$url"
             # ;;
             # tgz|tar.gz)
-            # # echo "Extracting tar.gz: $url"
+            # # echo -e "\nExtracting tar.gz: $url"
             # tar -xzf "$url" -C "$(dirname "$url")"
+            # rm "$my_unzipped_folder/$url"
             # ;;
             # *)
-            # # echo "Skipping unsupported file: $url"
+            # # echo -e "\nSkipping unsupported file: $url"
             # ;;
         esac
+        ((downloaded++))
     else        
          # Handle relative URLs
         if [[ "$url" != http* ]]; then
