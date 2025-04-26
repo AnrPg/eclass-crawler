@@ -1,9 +1,13 @@
 #!/bin/bash
 
+# TODO: refactor code to avoid code repetitions for the two modes. Also give better names to urls, url, downloaded
+
+# TODO: check for available free space before extracting
+
 set -uo pipefail
 
 website="$1"
-destination_dir="${2:-.}"
+destination_dir="${2:-$PWD}"
 autograb_links="${3:-1}" # If arg 3 is missing, set it to default (to automatically crawl the webpage, create a list of downloadable files and then grab them)
 cookies_file="${4:-cookies.txt}"
 log_file="$destination_dir/downloaded.log"
@@ -56,6 +60,8 @@ count=0
 downloaded=0
 bar_length=50
 
+orig_dir="$PWD"
+
 # Loop through urls and download or unpack them depending on the mode
 # If mode = 1 then download all links in the page, one by one, while
 # if mode = 0, that means that you downloaded a zip with all files, so
@@ -68,8 +74,9 @@ for url in "${urls[@]}"; do
         ext="${url##*.}"  # Get the extension
         case "$ext" in
             zip)
-            # echo -e "\nUnzipping: $url"
+            echo -e "\nUnzipping: $url"
             unzip -o "$my_unzipped_folder/$url" -d "$my_unzipped_folder/"
+            rm "$my_unzipped_folder/$url"
             ;;
             rar)
             echo -e "\nUnpacking RAR: $url at $(dirname "$url")"
@@ -77,32 +84,32 @@ for url in "${urls[@]}"; do
             rm "$my_unzipped_folder/$url"
             ;;
             tar)
-            # echo -e "\nExtracting tar: $url"
+            echo -e "\nExtracting tar: $url"
             tar -xf "$my_unzipped_folder/$url" -C "$my_unzipped_folder/"
             rm "$my_unzipped_folder/$url"
             ;;
-            # 7z)
-            # # echo -e "\nUnpacking 7z: $url"
-            # 7z x "$url" -o"$(dirname "$url")" -y
-            # rm "$my_unzipped_folder/$url"
-            # ;;
-            # gz)
-            # # echo -e "\nDecompressing gzip: $url"
-            # gunzip -k "$url"  # -k keeps original .gz file
-            # rm "$my_unzipped_folder/$url"
-            # ;;
-            # tgz|tar.gz)
-            # # echo -e "\nExtracting tar.gz: $url"
-            # tar -xzf "$url" -C "$(dirname "$url")"
-            # rm "$my_unzipped_folder/$url"
-            # ;;
-            # *)
-            # # echo -e "\nSkipping unsupported file: $url"
-            # ;;
+            7z)
+            echo -e "\nUnpacking 7z: $url"
+            7z x "$url" -o"$(dirname "$url")" -y
+            rm "$my_unzipped_folder/$url"
+            ;;
+            gz)
+            echo -e "\nDecompressing gzip: $url"
+            gunzip -k "$url"  # -k keeps original .gz file
+            rm "$my_unzipped_folder/$url"
+            ;;
+            tgz|tar.gz)
+            echo -e "\nExtracting tar.gz: $url"
+            tar -xzf "$url" -C "$(dirname "$url")"
+            rm "$my_unzipped_folder/$url"
+            ;;
+            *)
+            echo -e "\nSkipping unsupported file: $url"
+            ;;
         esac
         ((downloaded++))
     else        
-         # Handle relative URLs
+        #  Handle relative URLs
         if [[ "$url" != http* ]]; then
             base=$(echo "$website" | sed 's|\(https*://[^/]*\).*|\1|')
             full_url="${base}/${url}"
@@ -111,6 +118,7 @@ for url in "${urls[@]}"; do
         fi
 
         # Check if already downloaded
+        echo -e "\nChecking if file is already downloaded\n"
         if grep -Fxq "$full_url" "$log_file"; then
             percent=$(( count * 100 / total ))
             filled=$(( percent * bar_length / 100 ))
@@ -120,9 +128,48 @@ for url in "${urls[@]}"; do
         fi
 
         # Download
-        if curl -s -b $cookies_file -L -O "$full_url"; then # TODO: check that output is saved in the dir specified by the argument
+        cd $destination_dir # TODO: move it out of the loop (taking into consideration the case where mode=0)
+        if filename=$(curl -s -b $cookies_file --write-out "%{filename_effective}" -L -OJ "$full_url"); then 
+            # echo -e "\n--------------\n\norig_dir: $orig_dir\n\ndestination_dir: $destination_dir\n\ncurrent_dir: $PWD\n\n---------------\n\n"
             echo "$full_url" >> "$log_file"
             ((downloaded++))
+            # ext="${filename##*.}"  # Get the extension
+            # # echo -e "\n--------------\n\norig_dir: $orig_dir\n\ndestination_dir: $destination_dir\n\nfilename: $filename\n\nfull_url: $full_url\n\next: $ext\n\n---------------\n\n"
+            # case "$ext" in
+            #     zip)
+            #     echo -e "\nUnzipping: $filename at $destination_dir/$filename"
+            #     unzip -o "$destination_dir/$filename" -d "$destination_dir/"
+            #     rm "$destination_dir/$filename"
+            #     ;;
+            #     rar)
+            #     echo -e "\nUnpacking RAR: $filename at $destination_dir/$filename"
+            #     unrar x -o+ "$destination_dir/$filename" "$destination_dir/"
+            #     # rm "$destination_dir/$filename"
+            #     ;;
+            #     tar)
+            #     echo -e "\nExtracting tar: $filename at $destination_dir/$filename"
+            #     tar -xf "$destination_dir/$filename" -C "$destination_dir/"
+            #     rm "$destination_dir/$filename"
+            #     ;;
+            #     7z)
+            #     echo -e "\nUnpacking 7z: $filename at $destination_dir/$filename"
+            #     7z x "$filename" -o"$(dirname "$filename")" -y
+            #     rm "$destination_dir/$filename"
+            #     ;;
+            #     gz)
+            #     echo -e "\nDecompressing gzip: $filename at $destination_dir/$filename"
+            #     gunzip -k "$filename"  # -k keeps original .gz file
+            #     rm "$destination_dir/$filename"
+            #     ;;
+            #     tgz|tar.gz)
+            #     echo -e "\nExtracting tar.gz: $filename at $destination_dir/$filename"
+            #     tar -xzf "$filename" -C "$(dirname "$filename")"
+            #     rm "$destination_dir/$filename"
+            #     ;;
+            #     *)
+            #     echo -e "\nSkipping unsupported file: $filename"
+            #     ;;
+            # esac
         fi
     fi
 
@@ -134,6 +181,8 @@ for url in "${urls[@]}"; do
     bar=$(printf "%-${bar_length}s" "#" | cut -c1-$filled)
     printf "\r⬇️ Downloading: [%-${bar_length}s] %3d%% (%d/%d)" "$bar" "$percent" "$count" "$total"
 done
+
+cd $orig_dir
 
 echo -e "\n\n✅ Finished. Downloaded $downloaded new file(s)."
 echo "📓 Progress log saved to: $log_file"
